@@ -115,6 +115,9 @@ export default function ArtisticChromaKey() {
   const [uploadedBgVideos, setUploadedBgVideos] = useState<UploadedBgVideo[]>([]);
   const [bgIndex, setBgIndex] = useState(0);
   const bgObjectUrlRef = useRef<string | null>(null);
+  const [settingsTab, setSettingsTab] = useState<"camera" | "background">(
+    "camera"
+  );
 
   const useYoutubeBackground = youtubeUrls.length > 0;
   const useUploadedBackground = !useYoutubeBackground && uploadedBgVideos.length > 0;
@@ -445,7 +448,7 @@ export default function ArtisticChromaKey() {
             onClick={() => setShowSettingsModal(false)}
             aria-hidden
           />
-          <div className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-full max-w-md rounded-2xl bg-slate-900 border border-slate-700 shadow-2xl p-6 space-y-5">
+          <div className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-full max-w-md rounded-2xl bg-slate-900 border border-slate-700 shadow-2xl p-6 space-y-5 max-h-[85vh] overflow-y-auto">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold text-slate-100">
                 Ayarlar
@@ -488,297 +491,348 @@ export default function ArtisticChromaKey() {
               </div>
             )}
 
-            <div className="space-y-4">
-              <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wide">
+            <div className="grid grid-cols-2 gap-2 rounded-xl bg-slate-800/60 p-1 border border-slate-700">
+              <button
+                type="button"
+                onClick={() => setSettingsTab("camera")}
+                className={`px-3 py-2 rounded-lg text-sm font-medium transition ${
+                  settingsTab === "camera"
+                    ? "bg-slate-900 text-white"
+                    : "text-slate-300 hover:text-white"
+                }`}
+              >
                 Kamera
-              </h3>
+              </button>
+              <button
+                type="button"
+                onClick={() => setSettingsTab("background")}
+                className={`px-3 py-2 rounded-lg text-sm font-medium transition ${
+                  settingsTab === "background"
+                    ? "bg-slate-900 text-white"
+                    : "text-slate-300 hover:text-white"
+                }`}
+              >
+                Arkaplan
+              </button>
+            </div>
 
-              <div className="space-y-2">
-                <label className="block text-xs text-slate-300">Kamera seçimi</label>
-                <select
-                  value={selectedCameraId}
-                  onChange={(e) => setSelectedCameraId(e.target.value)}
-                  className="w-full rounded-lg bg-slate-800 border border-slate-600 px-3 py-2 text-sm text-slate-200"
-                >
-                  {cameras.length === 0 ? (
-                    <option value="">(Kamera bulunamadı)</option>
-                  ) : (
-                    cameras.map((c, i) => (
-                      <option key={c.deviceId} value={c.deviceId}>
-                        {c.label || `Kamera ${i + 1}`}
-                      </option>
-                    ))
-                  )}
-                </select>
-              </div>
+            {settingsTab === "camera" && (
+              <>
+                <div className="space-y-4">
+                  <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wide">
+                    Kamera
+                  </h3>
 
-              <div className="space-y-2">
-                <label className="block text-xs text-slate-300">Çözünürlük</label>
-                <div className="grid grid-cols-3 gap-2">
-                  {[
-                    [320, 240],
-                    [640, 480],
-                    [854, 480],
-                    [1280, 720],
-                    [1920, 1080],
-                    [2560, 1440],
-                  ].map(([w, h]) => {
-                    const active = captureWidth === w && captureHeight === h;
-                    return (
-                      <button
-                        key={`${w}x${h}`}
-                        type="button"
-                        onClick={() => {
-                          setCaptureWidth(w);
-                          setCaptureHeight(h);
-                          setCustomWidth(String(w));
-                          setCustomHeight(String(h));
-                          setCameraRetry((r) => r + 1);
-                        }}
-                        className={`px-3 py-2 rounded-lg text-xs border ${
-                          active
-                            ? "bg-slate-700 border-slate-500 text-white"
-                            : "bg-slate-800 border-slate-600 text-slate-200 hover:bg-slate-700"
-                        }`}
-                      >
-                        {w}×{h}
-                      </button>
-                    );
-                  })}
+                  <div className="space-y-2">
+                    <label className="block text-xs text-slate-300">Kamera seçimi</label>
+                    <select
+                      value={selectedCameraId}
+                      onChange={(e) => setSelectedCameraId(e.target.value)}
+                      className="w-full rounded-lg bg-slate-800 border border-slate-600 px-3 py-2 text-sm text-slate-200"
+                    >
+                      {cameras.length === 0 ? (
+                        <option value="">(Kamera bulunamadı)</option>
+                      ) : (
+                        cameras.map((c, i) => (
+                          <option key={c.deviceId} value={c.deviceId}>
+                            {c.label || `Kamera ${i + 1}`}
+                          </option>
+                        ))
+                      )}
+                    </select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="block text-xs text-slate-300">Çözünürlük</label>
+                    <div className="grid grid-cols-3 gap-2">
+                      {[
+                        [320, 240],
+                        [640, 480],
+                        [854, 480],
+                        [1280, 720],
+                        [1920, 1080],
+                        [2560, 1440],
+                      ].map(([w, h]) => {
+                        const active = captureWidth === w && captureHeight === h;
+                        return (
+                          <button
+                            key={`${w}x${h}`}
+                            type="button"
+                            onClick={() => {
+                              setCaptureWidth(w);
+                              setCaptureHeight(h);
+                              setCustomWidth(String(w));
+                              setCustomHeight(String(h));
+                              setCameraRetry((r) => r + 1);
+                            }}
+                            className={`px-3 py-2 rounded-lg text-xs border ${
+                              active
+                                ? "bg-slate-700 border-slate-500 text-white"
+                                : "bg-slate-800 border-slate-600 text-slate-200 hover:bg-slate-700"
+                            }`}
+                          >
+                            {w}×{h}
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    <div className="mt-3 space-y-2">
+                      <label className="block text-xs text-slate-300">Özel çözünürlük</label>
+                      <div className="flex gap-2">
+                        <input
+                          inputMode="numeric"
+                          value={customWidth}
+                          onChange={(e) =>
+                            setCustomWidth(e.target.value.replace(/[^\d]/g, ""))
+                          }
+                          placeholder="Genişlik"
+                          className="w-full rounded-lg bg-slate-800 border border-slate-600 px-3 py-2 text-sm text-slate-200"
+                        />
+                        <input
+                          inputMode="numeric"
+                          value={customHeight}
+                          onChange={(e) =>
+                            setCustomHeight(e.target.value.replace(/[^\d]/g, ""))
+                          }
+                          placeholder="Yükseklik"
+                          className="w-full rounded-lg bg-slate-800 border border-slate-600 px-3 py-2 text-sm text-slate-200"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const w = Number(customWidth);
+                            const h = Number(customHeight);
+                            if (
+                              !Number.isFinite(w) ||
+                              !Number.isFinite(h) ||
+                              w <= 0 ||
+                              h <= 0
+                            )
+                              return;
+                            setCaptureWidth(w);
+                            setCaptureHeight(h);
+                            setCameraRetry((r) => r + 1);
+                          }}
+                          className="shrink-0 px-3 py-2 rounded-lg bg-sky-600 hover:bg-sky-500 text-white text-sm font-medium"
+                        >
+                          Uygula
+                        </button>
+                      </div>
+                      <div className="flex items-center justify-between text-xs text-slate-500">
+                        <span>
+                          İstek:{" "}
+                          <span className="tabular-nums">
+                            {captureWidth}×{captureHeight}
+                          </span>
+                        </span>
+                        <span>
+                          Gerçek:{" "}
+                          <span className="tabular-nums">
+                            {actualWidth && actualHeight
+                              ? `${actualWidth}×${actualHeight}`
+                              : "—"}
+                          </span>
+                        </span>
+                      </div>
+                    </div>
+                    <p className="text-xs text-slate-500">
+                      Değişiklikler otomatik uygulanır; gerekirse “Tekrar dene” ile
+                      yenileyebilirsin.
+                    </p>
+                  </div>
                 </div>
 
-                <div className="mt-3 space-y-2">
-                  <label className="block text-xs text-slate-300">Özel çözünürlük</label>
+                <div className="space-y-4">
+                  <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wide">
+                    Chroma
+                  </h3>
+                  <div className="space-y-2">
+                    <label className="flex items-center justify-between text-xs text-slate-300">
+                      <span>Yeşil Eşik (G)</span>
+                      <span className="tabular-nums text-slate-400">
+                        {greenThreshold}
+                      </span>
+                    </label>
+                    <input
+                      type="range"
+                      min={0}
+                      max={255}
+                      value={greenThreshold}
+                      onChange={(e) => setGreenThreshold(Number(e.target.value))}
+                      className="w-full accent-emerald-500"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="flex items-center justify-between text-xs text-slate-300">
+                      <span>Benzerlik</span>
+                      <span className="tabular-nums text-slate-400">
+                        {similarity.toFixed(2)}
+                      </span>
+                    </label>
+                    <input
+                      type="range"
+                      min={1}
+                      max={2}
+                      step={0.05}
+                      value={similarity}
+                      onChange={(e) => setSimilarity(Number(e.target.value))}
+                      className="w-full accent-sky-500"
+                    />
+                  </div>
+                </div>
+              </>
+            )}
+
+            {settingsTab === "background" && (
+              <>
+                <div className="space-y-4">
+                  <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wide">
+                    Arka plan videoları (YouTube)
+                  </h3>
                   <div className="flex gap-2">
                     <input
-                      inputMode="numeric"
-                      value={customWidth}
-                      onChange={(e) => setCustomWidth(e.target.value.replace(/[^\d]/g, ""))}
-                      placeholder="Genişlik"
-                      className="w-full rounded-lg bg-slate-800 border border-slate-600 px-3 py-2 text-sm text-slate-200"
-                    />
-                    <input
-                      inputMode="numeric"
-                      value={customHeight}
-                      onChange={(e) => setCustomHeight(e.target.value.replace(/[^\d]/g, ""))}
-                      placeholder="Yükseklik"
-                      className="w-full rounded-lg bg-slate-800 border border-slate-600 px-3 py-2 text-sm text-slate-200"
+                      type="url"
+                      value={newVideoUrl}
+                      onChange={(e) => setNewVideoUrl(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          const id = getYoutubeVideoId(newVideoUrl);
+                          if (id) {
+                            setYoutubeUrls((u) => [...u, newVideoUrl.trim()]);
+                            setNewVideoUrl("");
+                          }
+                        }
+                      }}
+                      placeholder="YouTube linki yapıştır"
+                      className="flex-1 min-w-0 rounded-lg bg-slate-800 border border-slate-600 px-3 py-2 text-sm text-slate-200 placeholder:text-slate-500"
                     />
                     <button
                       type="button"
                       onClick={() => {
-                        const w = Number(customWidth);
-                        const h = Number(customHeight);
-                        if (!Number.isFinite(w) || !Number.isFinite(h) || w <= 0 || h <= 0) return;
-                        setCaptureWidth(w);
-                        setCaptureHeight(h);
-                        setCameraRetry((r) => r + 1);
+                        const id = getYoutubeVideoId(newVideoUrl);
+                        if (id) {
+                          setYoutubeUrls((u) => [...u, newVideoUrl.trim()]);
+                          setNewVideoUrl("");
+                        }
                       }}
                       className="shrink-0 px-3 py-2 rounded-lg bg-sky-600 hover:bg-sky-500 text-white text-sm font-medium"
                     >
-                      Uygula
+                      Ekle
                     </button>
                   </div>
-                  <div className="flex items-center justify-between text-xs text-slate-500">
-                    <span>
-                      İstek: <span className="tabular-nums">{captureWidth}×{captureHeight}</span>
-                    </span>
-                    <span>
-                      Gerçek:{" "}
-                      <span className="tabular-nums">
-                        {actualWidth && actualHeight ? `${actualWidth}×${actualHeight}` : "—"}
-                      </span>
-                    </span>
-                  </div>
+                  <ul className="space-y-1 max-h-32 overflow-y-auto">
+                    {youtubeUrls.map((url, i) => {
+                      const id = getYoutubeVideoId(url);
+                      return (
+                        <li
+                          key={`${id}-${i}`}
+                          className="flex items-center gap-2 text-xs text-slate-300 bg-slate-800/80 rounded px-2 py-1.5"
+                        >
+                          <span className="shrink-0 text-slate-500">{i + 1}.</span>
+                          <span className="min-w-0 truncate flex-1" title={url}>
+                            {id ?? url}
+                          </span>
+                          {youtubeUrls.length > 0 &&
+                            currentVideoIndex % youtubeUrls.length === i && (
+                              <span className="shrink-0 text-emerald-400">▶</span>
+                            )}
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setYoutubeUrls((u) => u.filter((_, j) => j !== i))
+                            }
+                            className="shrink-0 text-rose-400 hover:text-rose-300"
+                            aria-label="Kaldır"
+                          >
+                            ✕
+                          </button>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                  {youtubeUrls.length === 0 && (
+                    <p className="text-xs text-slate-500">
+                      Liste boşken yerel video (vv01.mp4) oynar.
+                    </p>
+                  )}
                 </div>
-                <p className="text-xs text-slate-500">
-                  Değişiklikler otomatik uygulanır; gerekirse “Tekrar dene” ile yenileyebilirsin.
-                </p>
-              </div>
-            </div>
 
-            <div className="space-y-4">
-              <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wide">
-                Arka plan videoları (YouTube)
-              </h3>
-              <div className="flex gap-2">
-                <input
-                  type="url"
-                  value={newVideoUrl}
-                  onChange={(e) => setNewVideoUrl(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      const id = getYoutubeVideoId(newVideoUrl);
-                      if (id) {
-                        setYoutubeUrls((u) => [...u, newVideoUrl.trim()]);
-                        setNewVideoUrl("");
-                      }
-                    }
-                  }}
-                  placeholder="YouTube linki yapıştır"
-                  className="flex-1 min-w-0 rounded-lg bg-slate-800 border border-slate-600 px-3 py-2 text-sm text-slate-200 placeholder:text-slate-500"
-                />
-                <button
-                  type="button"
-                  onClick={() => {
-                    const id = getYoutubeVideoId(newVideoUrl);
-                    if (id) {
-                      setYoutubeUrls((u) => [...u, newVideoUrl.trim()]);
-                      setNewVideoUrl("");
-                    }
-                  }}
-                  className="shrink-0 px-3 py-2 rounded-lg bg-sky-600 hover:bg-sky-500 text-white text-sm font-medium"
-                >
-                  Ekle
-                </button>
-              </div>
-              <ul className="space-y-1 max-h-32 overflow-y-auto">
-                {youtubeUrls.map((url, i) => {
-                  const id = getYoutubeVideoId(url);
-                  return (
-                    <li
-                      key={`${id}-${i}`}
-                      className="flex items-center gap-2 text-xs text-slate-300 bg-slate-800/80 rounded px-2 py-1.5"
-                    >
-                      <span className="shrink-0 text-slate-500">
-                        {i + 1}.
-                      </span>
-                      <span className="min-w-0 truncate flex-1" title={url}>
-                        {id ?? url}
-                      </span>
-                      {currentVideoIndex % youtubeUrls.length === i && (
-                        <span className="shrink-0 text-emerald-400">▶</span>
-                      )}
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setYoutubeUrls((u) => u.filter((_, j) => j !== i))
+                <div className="space-y-4">
+                  <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wide">
+                    Arka plan videoları (Dosya)
+                  </h3>
+
+                  <input
+                    type="file"
+                    accept="video/*"
+                    multiple
+                    onChange={async (e) => {
+                      const files = Array.from(e.target.files ?? []);
+                      if (files.length === 0) return;
+                      for (const f of files) {
+                        try {
+                          await bgPut(f);
+                        } catch {
+                          // ignore
                         }
-                        className="shrink-0 text-rose-400 hover:text-rose-300"
-                        aria-label="Kaldır"
-                      >
-                        ✕
-                      </button>
-                    </li>
-                  );
-                })}
-              </ul>
-              {youtubeUrls.length === 0 && (
-                <p className="text-xs text-slate-500">
-                  Liste boşken yerel video (vv01.mp4) oynar.
-                </p>
-              )}
-            </div>
-
-            <div className="space-y-4">
-              <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wide">
-                Arka plan videoları (Dosya)
-              </h3>
-
-              <input
-                type="file"
-                accept="video/*"
-                multiple
-                onChange={async (e) => {
-                  const files = Array.from(e.target.files ?? []);
-                  if (files.length === 0) return;
-                  for (const f of files) {
-                    try {
-                      await bgPut(f);
-                    } catch {
-                      // ignore
-                    }
-                  }
-                  try {
-                    setUploadedBgVideos(await bgList());
-                    setBgIndex(0);
-                  } catch {
-                    // ignore
-                  }
-                  e.currentTarget.value = "";
-                }}
-                className="block w-full text-sm text-slate-200 file:mr-3 file:rounded-lg file:border-0 file:bg-slate-700 file:px-3 file:py-2 file:text-sm file:font-medium file:text-white hover:file:bg-slate-600"
-              />
-
-              <ul className="space-y-1 max-h-32 overflow-y-auto">
-                {uploadedBgVideos.map((v, i) => (
-                  <li
-                    key={v.key}
-                    className="flex items-center gap-2 text-xs text-slate-300 bg-slate-800/80 rounded px-2 py-1.5"
-                  >
-                    <span className="shrink-0 text-slate-500">{i + 1}.</span>
-                    <span className="min-w-0 truncate flex-1" title={v.name}>
-                      {v.name}
-                    </span>
-                    {useUploadedBackground && (bgIndex % uploadedBgVideos.length) === i && (
-                      <span className="shrink-0 text-emerald-400">▶</span>
-                    )}
-                    <button
-                      type="button"
-                      onClick={async () => {
-                        await bgRemove(v.key);
-                        const next = await bgList();
-                        setUploadedBgVideos(next);
+                      }
+                      try {
+                        setUploadedBgVideos(await bgList());
                         setBgIndex(0);
-                      }}
-                      className="shrink-0 text-rose-400 hover:text-rose-300"
-                      aria-label="Sil"
-                    >
-                      ✕
-                    </button>
-                  </li>
-                ))}
-              </ul>
+                      } catch {
+                        // ignore
+                      }
+                      e.currentTarget.value = "";
+                    }}
+                    className="block w-full text-sm text-slate-200 file:mr-3 file:rounded-lg file:border-0 file:bg-slate-700 file:px-3 file:py-2 file:text-sm file:font-medium file:text-white hover:file:bg-slate-600"
+                  />
 
-              {uploadedBgVideos.length > 0 ? (
-                <p className="text-xs text-slate-500">
-                  YouTube listesi boşsa, yüklediğin videolar sırayla oynar.
-                </p>
-              ) : (
-                <p className="text-xs text-slate-500">
-                  Not: Web uygulaması çalışırken `public/videos/background` içine dosya yazamaz; bu upload videoları tarayıcıda saklar.
-                </p>
-              )}
-            </div>
+                  <ul className="space-y-1 max-h-32 overflow-y-auto">
+                    {uploadedBgVideos.map((v, i) => (
+                      <li
+                        key={v.key}
+                        className="flex items-center gap-2 text-xs text-slate-300 bg-slate-800/80 rounded px-2 py-1.5"
+                      >
+                        <span className="shrink-0 text-slate-500">{i + 1}.</span>
+                        <span className="min-w-0 truncate flex-1" title={v.name}>
+                          {v.name}
+                        </span>
+                        {useUploadedBackground &&
+                          uploadedBgVideos.length > 0 &&
+                          bgIndex % uploadedBgVideos.length === i && (
+                            <span className="shrink-0 text-emerald-400">▶</span>
+                          )}
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            await bgRemove(v.key);
+                            const next = await bgList();
+                            setUploadedBgVideos(next);
+                            setBgIndex(0);
+                          }}
+                          className="shrink-0 text-rose-400 hover:text-rose-300"
+                          aria-label="Sil"
+                        >
+                          ✕
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
 
-            <div className="space-y-4">
-              <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wide">
-                Chroma
-              </h3>
-              <div className="space-y-2">
-                <label className="flex items-center justify-between text-xs text-slate-300">
-                  <span>Yeşil Eşik (G)</span>
-                  <span className="tabular-nums text-slate-400">
-                    {greenThreshold}
-                  </span>
-                </label>
-                <input
-                  type="range"
-                  min={0}
-                  max={255}
-                  value={greenThreshold}
-                  onChange={(e) => setGreenThreshold(Number(e.target.value))}
-                  className="w-full accent-emerald-500"
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="flex items-center justify-between text-xs text-slate-300">
-                  <span>Benzerlik</span>
-                  <span className="tabular-nums text-slate-400">
-                    {similarity.toFixed(2)}
-                  </span>
-                </label>
-                <input
-                  type="range"
-                  min={1}
-                  max={2}
-                  step={0.05}
-                  value={similarity}
-                  onChange={(e) => setSimilarity(Number(e.target.value))}
-                  className="w-full accent-sky-500"
-                />
-              </div>
-            </div>
+                  {uploadedBgVideos.length > 0 ? (
+                    <p className="text-xs text-slate-500">
+                      YouTube listesi boşsa, yüklediğin videolar sırayla oynar.
+                    </p>
+                  ) : (
+                    <p className="text-xs text-slate-500">
+                      Not: Web uygulaması çalışırken `public/videos/background` içine
+                      dosya yazamaz; bu upload videoları tarayıcıda saklar.
+                    </p>
+                  )}
+                </div>
+              </>
+            )}
 
             <p className="text-xs text-slate-500">
               F9 ile bu pencereyi açıp kapatabilirsin.
