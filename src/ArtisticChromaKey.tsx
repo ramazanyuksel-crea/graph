@@ -296,6 +296,16 @@ export default function ArtisticChromaKey() {
         className="absolute inset-0 z-10 w-full h-full object-contain block bg-transparent"
       />
 
+      <button
+        type="button"
+        onClick={() => setShowSettingsModal(true)}
+        className="fixed top-3 right-3 z-30 h-10 w-10 rounded-full bg-slate-900/80 border border-slate-700 text-slate-100 shadow-lg backdrop-blur hover:bg-slate-800 active:scale-95 transition"
+        aria-label="Ayarlar"
+        title="Ayarlar"
+      >
+        ⚙
+      </button>
+
       {showSettingsModal && (
         <>
           <div
