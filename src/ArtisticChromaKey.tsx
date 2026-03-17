@@ -7,6 +7,76 @@ function getYoutubeVideoId(url: string): string | null {
 }
 
 type CameraDevice = { deviceId: string; label: string };
+type UploadedBgVideo = { key: string; name: string; size: number; type: string; createdAt: number };
+
+const BG_DB_NAME = "chroma-key-bg";
+const BG_STORE = "videos";
+
+function openBgDb(): Promise<IDBDatabase> {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(BG_DB_NAME, 1);
+    req.onupgradeneeded = () => {
+      const db = req.result;
+      if (!db.objectStoreNames.contains(BG_STORE)) {
+        db.createObjectStore(BG_STORE, { keyPath: "key" });
+      }
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function bgList(): Promise<UploadedBgVideo[]> {
+  const db = await openBgDb();
+  return await new Promise((resolve, reject) => {
+    const tx = db.transaction(BG_STORE, "readonly");
+    const store = tx.objectStore(BG_STORE);
+    const req = store.getAll();
+    req.onsuccess = () => {
+      const rows = (req.result as Array<{ key: string; name: string; size: number; type: string; createdAt: number }>) ?? [];
+      resolve(rows.sort((a, b) => a.createdAt - b.createdAt));
+    };
+    req.onerror = () => reject(req.error);
+    tx.oncomplete = () => db.close();
+  });
+}
+
+async function bgPut(file: File): Promise<UploadedBgVideo> {
+  const db = await openBgDb();
+  const key = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  const row = { key, name: file.name, size: file.size, type: file.type || "video/*", createdAt: Date.now(), blob: file };
+  await new Promise<void>((resolve, reject) => {
+    const tx = db.transaction(BG_STORE, "readwrite");
+    tx.objectStore(BG_STORE).put(row);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+  db.close();
+  const { blob: _blob, ...meta } = row as any;
+  return meta as UploadedBgVideo;
+}
+
+async function bgGetBlob(key: string): Promise<Blob | null> {
+  const db = await openBgDb();
+  return await new Promise((resolve, reject) => {
+    const tx = db.transaction(BG_STORE, "readonly");
+    const req = tx.objectStore(BG_STORE).get(key);
+    req.onsuccess = () => resolve((req.result as any)?.blob ?? null);
+    req.onerror = () => reject(req.error);
+    tx.oncomplete = () => db.close();
+  });
+}
+
+async function bgRemove(key: string): Promise<void> {
+  const db = await openBgDb();
+  await new Promise<void>((resolve, reject) => {
+    const tx = db.transaction(BG_STORE, "readwrite");
+    tx.objectStore(BG_STORE).delete(key);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+  db.close();
+}
 
 declare global {
   interface Window {
@@ -42,8 +112,70 @@ export default function ArtisticChromaKey() {
   const [customHeight, setCustomHeight] = useState("480");
   const [actualWidth, setActualWidth] = useState(0);
   const [actualHeight, setActualHeight] = useState(0);
+  const [uploadedBgVideos, setUploadedBgVideos] = useState<UploadedBgVideo[]>([]);
+  const [bgIndex, setBgIndex] = useState(0);
+  const bgObjectUrlRef = useRef<string | null>(null);
 
   const useYoutubeBackground = youtubeUrls.length > 0;
+  const useUploadedBackground = !useYoutubeBackground && uploadedBgVideos.length > 0;
+
+  useEffect(() => {
+    bgList()
+      .then(setUploadedBgVideos)
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    // Uploaded video varsa onları sırayla oynat
+    const v = bgVideoRef.current;
+    if (!v) return;
+
+    const cleanupUrl = () => {
+      if (bgObjectUrlRef.current) {
+        URL.revokeObjectURL(bgObjectUrlRef.current);
+        bgObjectUrlRef.current = null;
+      }
+    };
+
+    const setSource = async () => {
+      if (!useUploadedBackground) {
+        cleanupUrl();
+        v.src = "/videos/vv01.mp4";
+        v.loop = true;
+        v.muted = true;
+        v.play().catch(() => {});
+        return;
+      }
+
+      const list = uploadedBgVideos;
+      const idx = list.length ? bgIndex % list.length : 0;
+      const item = list[idx];
+      if (!item) return;
+
+      const blob = await bgGetBlob(item.key);
+      if (!blob) return;
+
+      cleanupUrl();
+      const url = URL.createObjectURL(blob);
+      bgObjectUrlRef.current = url;
+      v.src = url;
+      v.loop = false;
+      v.muted = true;
+      v.play().catch(() => {});
+    };
+
+    void setSource();
+
+    const onEnded = () => {
+      if (!useUploadedBackground) return;
+      setBgIndex((i) => i + 1);
+    };
+    v.addEventListener("ended", onEnded);
+    return () => {
+      v.removeEventListener("ended", onEnded);
+      cleanupUrl();
+    };
+  }, [useUploadedBackground, uploadedBgVideos, bgIndex]);
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
@@ -299,7 +431,7 @@ export default function ArtisticChromaKey() {
       <button
         type="button"
         onClick={() => setShowSettingsModal(true)}
-        className="fixed top-3 right-3 z-30 h-10 w-10 rounded-full bg-slate-900/80 border border-slate-700 text-slate-100 shadow-lg backdrop-blur hover:bg-slate-800 active:scale-95 transition"
+        className="fixed top-3 right-3 z-30 h-10 w-10 rounded-full bg-slate-900/80 border border-slate-700 text-slate-100 shadow-lg backdrop-blur hover:bg-slate-800 active:scale-95 transition md:hidden"
         aria-label="Ayarlar"
         title="Ayarlar"
       >
@@ -534,6 +666,77 @@ export default function ArtisticChromaKey() {
               {youtubeUrls.length === 0 && (
                 <p className="text-xs text-slate-500">
                   Liste boşken yerel video (vv01.mp4) oynar.
+                </p>
+              )}
+            </div>
+
+            <div className="space-y-4">
+              <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wide">
+                Arka plan videoları (Dosya)
+              </h3>
+
+              <input
+                type="file"
+                accept="video/*"
+                multiple
+                onChange={async (e) => {
+                  const files = Array.from(e.target.files ?? []);
+                  if (files.length === 0) return;
+                  for (const f of files) {
+                    try {
+                      await bgPut(f);
+                    } catch {
+                      // ignore
+                    }
+                  }
+                  try {
+                    setUploadedBgVideos(await bgList());
+                    setBgIndex(0);
+                  } catch {
+                    // ignore
+                  }
+                  e.currentTarget.value = "";
+                }}
+                className="block w-full text-sm text-slate-200 file:mr-3 file:rounded-lg file:border-0 file:bg-slate-700 file:px-3 file:py-2 file:text-sm file:font-medium file:text-white hover:file:bg-slate-600"
+              />
+
+              <ul className="space-y-1 max-h-32 overflow-y-auto">
+                {uploadedBgVideos.map((v, i) => (
+                  <li
+                    key={v.key}
+                    className="flex items-center gap-2 text-xs text-slate-300 bg-slate-800/80 rounded px-2 py-1.5"
+                  >
+                    <span className="shrink-0 text-slate-500">{i + 1}.</span>
+                    <span className="min-w-0 truncate flex-1" title={v.name}>
+                      {v.name}
+                    </span>
+                    {useUploadedBackground && (bgIndex % uploadedBgVideos.length) === i && (
+                      <span className="shrink-0 text-emerald-400">▶</span>
+                    )}
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        await bgRemove(v.key);
+                        const next = await bgList();
+                        setUploadedBgVideos(next);
+                        setBgIndex(0);
+                      }}
+                      className="shrink-0 text-rose-400 hover:text-rose-300"
+                      aria-label="Sil"
+                    >
+                      ✕
+                    </button>
+                  </li>
+                ))}
+              </ul>
+
+              {uploadedBgVideos.length > 0 ? (
+                <p className="text-xs text-slate-500">
+                  YouTube listesi boşsa, yüklediğin videolar sırayla oynar.
+                </p>
+              ) : (
+                <p className="text-xs text-slate-500">
+                  Not: Web uygulaması çalışırken `public/videos/background` içine dosya yazamaz; bu upload videoları tarayıcıda saklar.
                 </p>
               )}
             </div>
